@@ -1,0 +1,13 @@
+{
+  "name": "ubani-hosting",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "apps/*",
+    "services/*"
+  ],
+  "scripts": {
+    "dev:api": "npm --workspace services/api run dev",
+    "deploy:api": "npm --workspace services/api run deploy"
+  }
+}
