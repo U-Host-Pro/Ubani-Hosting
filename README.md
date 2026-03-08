@@ -4,7 +4,7 @@ Production-ready starter for a Cloudflare-first hosting platform:
 
 - Marketing site, client portal, admin panel app scaffolds
 - API Worker with auth, deployment, billing, referral rewards
-- D1 schema and R2 object storage integration
+- Turso SQL database integration and optional R2 object storage integration
 - Yoco, Zoho, and OpenAI service adapters
 - GitHub Actions and Cloudflare deployment docs
 
@@ -12,9 +12,10 @@ Production-ready starter for a Cloudflare-first hosting platform:
 
 1. Install dependencies:
    - `npm install`
-2. Configure Worker secrets and bindings in `services/api/wrangler.toml`.
-3. Apply database schema:
-   - `wrangler d1 execute ubani-db --file ../../database/schema.sql`
+2. Configure Worker vars/secrets in `services/api/wrangler.toml`:
+   - `TURSO_DATABASE_URL` in `wrangler.toml`
+   - `wrangler secret put TURSO_AUTH_TOKEN`
+3. Apply `database/schema.sql` to your Turso database.
 4. Run locally:
    - `npm run dev:api`
 5. Deploy:

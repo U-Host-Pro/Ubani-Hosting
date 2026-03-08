@@ -1,4 +1,5 @@
 import { newId, nowIso } from "./db.js";
+import { runQuery } from "./turso.js";
 
 export async function deployFiles({ env, userId, projectName, files }) {
   if (!env.SITES) throw new Error("R2 binding SITES not configured");
@@ -17,12 +18,12 @@ export async function deployFiles({ env, userId, projectName, files }) {
   }
 
   const now = nowIso();
-  await env.DB.prepare(
+  await runQuery(
+    env,
     `INSERT INTO projects (id, user_id, name, domain, source_type, status, created_at, updated_at)
-     VALUES (?1, ?2, ?3, ?4, 'upload', 'live', ?5, ?5)`
-  )
-    .bind(projectId, userId, projectName || "My Website", null, now)
-    .run();
+     VALUES (?, ?, ?, ?, 'upload', 'live', ?, ?)`,
+    [projectId, userId, projectName || "My Website", null, now, now]
+  );
 
   return { projectId, status: "live", path: root };
 }

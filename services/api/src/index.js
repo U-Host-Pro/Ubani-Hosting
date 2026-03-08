@@ -6,6 +6,7 @@ import { error, json, parseJson, corsHeaders } from "./lib/http.js";
 import { createYocoCheckout } from "./lib/payments/yoco.js";
 import { rewardReferral } from "./lib/referrals.js";
 import { supportReply } from "./lib/supportAi.js";
+import { runQuery } from "./lib/turso.js";
 
 export default {
   async fetch(request, env) {
@@ -20,7 +21,17 @@ export default {
       const url = new URL(request.url);
 
       if (request.method === "GET" && url.pathname === "/api/health") {
-        return json({ ok: true, service: "ubani-api" }, { headers: cors });
+        return json(
+          {
+            ok: true,
+            service: "ubani-api",
+            features: {
+              deploymentEnabled: Boolean(env.SITES),
+              database: "turso"
+            }
+          },
+          { headers: cors }
+        );
       }
 
       if (request.method === "POST" && url.pathname === "/api/register") {
@@ -62,7 +73,7 @@ async function register(request, env) {
     return error(400, "email and password are required", "validation_error");
   }
 
-  const existing = await userByEmail(env.DB, body.email);
+  const existing = await userByEmail(env, body.email);
   if (existing) return error(409, "Email already exists", "duplicate_email");
 
   const id = newId("usr");
@@ -70,12 +81,12 @@ async function register(request, env) {
   const passwordHash = await hashPassword(body.password, env.PASSWORD_SALT || "change-me");
   const referrerId = body.referrerId || null;
 
-  await env.DB.prepare(
+  await runQuery(
+    env,
     `INSERT INTO users (id, email, password_hash, credit, referrer_id, created_at, updated_at)
-     VALUES (?1, ?2, ?3, 0, ?4, ?5, ?5)`
-  )
-    .bind(id, body.email.toLowerCase(), passwordHash, referrerId, now)
-    .run();
+     VALUES (?, ?, ?, 0, ?, ?, ?)`,
+    [id, body.email.toLowerCase(), passwordHash, referrerId, now, now]
+  );
 
   if (referrerId) {
     await rewardReferral({ env, referrerId, referredUserId: id });
@@ -101,7 +112,7 @@ async function login(request, env) {
     return error(400, "email and password are required", "validation_error");
   }
 
-  const user = await userByEmail(env.DB, body.email);
+  const user = await userByEmail(env, body.email);
   if (!user) return error(401, "Invalid credentials", "invalid_credentials");
 
   const actual = await hashPassword(body.password, env.PASSWORD_SALT || "change-me");
@@ -124,6 +135,13 @@ async function login(request, env) {
 async function deploy(request, env) {
   const user = await requireUser(request, env);
   if (!user) return error(401, "Unauthorized", "unauthorized");
+  if (!env.SITES) {
+    return error(
+      503,
+      "Deployment is temporarily unavailable. R2 storage is not configured yet.",
+      "deployment_unavailable"
+    );
+  }
 
   const body = await parseJson(request);
   const files = Array.isArray(body?.files) ? body.files : [];
@@ -154,18 +172,20 @@ async function invoice(request, env) {
   const invoiceId = newId("inv");
   const now = nowIso();
 
-  await env.DB.prepare(
+  await runQuery(
+    env,
     `INSERT INTO invoices (id, user_id, amount_cents, currency, status, provider, provider_reference, created_at, updated_at)
-     VALUES (?1, ?2, ?3, 'ZAR', 'pending', 'yoco', NULL, ?4, ?4)`
-  )
-    .bind(invoiceId, user.id, amountCents, now)
-    .run();
+     VALUES (?, ?, ?, 'ZAR', 'pending', 'yoco', NULL, ?, ?)`,
+    [invoiceId, user.id, amountCents, now, now]
+  );
 
   const checkout = await createYocoCheckout({ amountCents, invoiceId, env });
 
-  await env.DB.prepare("UPDATE invoices SET provider_reference = ?1, updated_at = ?2 WHERE id = ?3")
-    .bind(checkout.id || null, nowIso(), invoiceId)
-    .run();
+  await runQuery(env, "UPDATE invoices SET provider_reference = ?, updated_at = ? WHERE id = ?", [
+    checkout.id || null,
+    nowIso(),
+    invoiceId
+  ]);
 
   return json({ invoiceId, checkout }, { status: 201 });
 }
@@ -186,5 +206,5 @@ async function requireUser(request, env) {
   if (!token) return null;
   const payload = await verifyToken(token, env.JWT_SECRET || "change-me");
   if (!payload?.sub) return null;
-  return userById(env.DB, payload.sub);
+  return userById(env, payload.sub);
 }

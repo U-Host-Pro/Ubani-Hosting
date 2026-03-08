@@ -4,7 +4,7 @@
 
 - Domain: `ubanihosting.co.za`
 - Core compute: Cloudflare Workers
-- Database: Cloudflare D1 (`ubani-db`)
+- Database: Turso (libSQL)
 - Asset storage: Cloudflare R2 (`ubani-sites`)
 - Payments: Yoco
 - Transactional email: Zoho Mail API
