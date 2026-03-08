@@ -14,7 +14,7 @@ Production-ready starter for a Cloudflare-first hosting platform:
    - `npm install`
 2. Configure Worker vars/secrets in `services/api/wrangler.toml`:
    - `TURSO_DATABASE_URL` in `wrangler.toml`
-   - `wrangler secret put TURSO_AUTH_TOKEN`
+c   - `wrangler secret put TURSO_AUTH_TOKEN`
 3. Apply `database/schema.sql` to your Turso database.
 4. Run locally:
    - `npm run dev:api`
