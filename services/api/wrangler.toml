@@ -16,3 +16,20 @@ ZOHO_API_URL = "https://api.zoho.com"
 OPENAI_API_URL = "https://api.openai.com/v1"
 REFERRAL_REWARD_CENTS = 5000
 TURSO_DATABASE_URL = "libsql://ubani-db-supportubanihosting.aws-eu-west-1.turso.io"
+{
+  "observability": {
+    "enabled": false,
+    "head_sampling_rate": 1,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "persist": true,
+      "invocation_logs": true
+    },
+    "traces": {
+      "enabled": false,
+      "persist": true,
+      "head_sampling_rate": 1
+    }
+  }
+}
